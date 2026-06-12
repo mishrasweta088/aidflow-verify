@@ -5,6 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.database import Base, DATABASE_URL
+import app.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -51,6 +52,20 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def include_name(name, type_, parent_names):
+    if type_ == "schema":
+        return name in [None, "public"]
+    if type_ == "table":
+        return parent_names.get("schema_name") in [None, "public"]
+    return True
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    if reflected and compare_to is None:
+        return False
+    return True
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -66,7 +81,11 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_schemas=True,
+            include_name=include_name,
+            include_object=include_object
         )
 
         with context.begin_transaction():
