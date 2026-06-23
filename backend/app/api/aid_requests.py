@@ -76,3 +76,46 @@ def review_aid_request_with_ai(
     db.refresh(aid_request)
 
     return aid_request
+
+@router.post("/{aid_request_id}/approve", response_model=AidRequestResponse)
+def approve_aid_request(
+    aid_request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    aid_request.status = AidRequestStatus.ADMIN_APPROVED
+
+    db.commit()
+    db.refresh(aid_request)
+
+    return aid_request
+
+
+@router.post("/{aid_request_id}/reject", response_model=AidRequestResponse)
+def reject_aid_request(
+    aid_request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    aid_request.status = AidRequestStatus.ADMIN_REJECTED
+
+    db.commit()
+    db.refresh(aid_request)
+
+    return aid_request
