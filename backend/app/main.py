@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.auth import router as auth_router
+from app.api.aid_requests import router as aid_requests_router
 
 app = FastAPI(
     title="AidFlow Verify API",
@@ -9,6 +10,8 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(aid_requests_router)
+
 
 
 @app.get("/")
