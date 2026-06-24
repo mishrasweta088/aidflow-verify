@@ -1,3 +1,5 @@
+from sqlalchemy import func
+from app.models.profile import Profile
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.models.aid_request import AidRequest, AidRequestStatus
@@ -5,7 +7,7 @@ from app.services.ai_review import generate_ai_review
 
 from app.dependencies import get_current_user, get_db, require_roles
 from app.models.user import User, UserRole
-from app.schemas.aid_request import AidRequestCreate, AidRequestResponse
+from app.schemas.aid_request import AidRequestCreate, AidRequestResponse, NearbyVolunteerResponse
 
 router = APIRouter(prefix="/aid-requests", tags=["aid requests"])
 
@@ -119,3 +121,51 @@ def reject_aid_request(
     db.refresh(aid_request)
 
     return aid_request
+
+@router.get(
+    "/{aid_request_id}/nearby-volunteers",
+    response_model=list[NearbyVolunteerResponse],
+)
+def get_nearby_volunteers(
+    aid_request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    if aid_request.latitude is None or aid_request.longitude is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aid request does not have location coordinates",
+        )
+
+    distance_meters = func.ST_DistanceSphere(
+        func.ST_MakePoint(Profile.longitude, Profile.latitude),
+        func.ST_MakePoint(aid_request.longitude, aid_request.latitude),
+    )
+
+    results = (
+        db.query(
+            User.id,
+            User.email,
+            Profile.full_name,
+            Profile.latitude,
+            Profile.longitude,
+            distance_meters.label("distance_meters"),
+        )
+        .join(Profile, Profile.user_id == User.id)
+        .filter(User.role == UserRole.VOLUNTEER)
+        .filter(Profile.latitude.isnot(None))
+        .filter(Profile.longitude.isnot(None))
+        .order_by(distance_meters)
+        .limit(10)
+        .all()
+    )
+
+    return results
