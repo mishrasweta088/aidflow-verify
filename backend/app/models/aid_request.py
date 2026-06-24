@@ -58,6 +58,14 @@ class AidRequest(Base):
     ai_risk_indicators: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_verification_checklist: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    claimed_by_donor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
@@ -71,4 +79,5 @@ class AidRequest(Base):
         nullable=False,
     )
 
-    requester = relationship("User")
+    requester = relationship("User", foreign_keys=[requester_id])
+    claimed_by_donor = relationship("User", foreign_keys=[claimed_by_donor_id])

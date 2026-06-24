@@ -12,6 +12,8 @@ from app.schemas.aid_request import AidRequestCreate, AidRequestResponse, Nearby
 from app.models.verification_task import VerificationTask
 from app.schemas.verification_task import VerificationTaskAssign, VerificationTaskResponse
 
+from datetime import datetime
+
 router = APIRouter(prefix="/aid-requests", tags=["aid requests"])
 
 
@@ -65,6 +67,41 @@ def get_verified_aid_requests(
         .order_by(AidRequest.created_at.desc())
         .all()
     )
+
+@router.post("/{aid_request_id}/claim", response_model=AidRequestResponse)
+def claim_aid_request(
+    aid_request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DONOR)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    if aid_request.status != AidRequestStatus.VERIFIED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only verified aid requests can be claimed",
+        )
+
+    if aid_request.claimed_by_donor_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Aid request is already claimed",
+        )
+
+    aid_request.claimed_by_donor_id = current_user.id
+    aid_request.claimed_at = datetime.utcnow()
+    aid_request.status = AidRequestStatus.CLAIMED
+
+    db.commit()
+    db.refresh(aid_request)
+
+    return aid_request
 
 @router.post("/{aid_request_id}/ai-review", response_model=AidRequestResponse)
 def review_aid_request_with_ai(
