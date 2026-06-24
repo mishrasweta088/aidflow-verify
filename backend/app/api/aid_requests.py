@@ -9,6 +9,9 @@ from app.dependencies import get_current_user, get_db, require_roles
 from app.models.user import User, UserRole
 from app.schemas.aid_request import AidRequestCreate, AidRequestResponse, NearbyVolunteerResponse
 
+from app.models.verification_task import VerificationTask
+from app.schemas.verification_task import VerificationTaskAssign, VerificationTaskResponse
+
 router = APIRouter(prefix="/aid-requests", tags=["aid requests"])
 
 
@@ -169,3 +172,54 @@ def get_nearby_volunteers(
     )
 
     return results
+
+@router.post(
+    "/{aid_request_id}/assign-volunteer",
+    response_model=VerificationTaskResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def assign_volunteer_to_aid_request(
+    aid_request_id: str,
+    payload: VerificationTaskAssign,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    if aid_request.status != AidRequestStatus.ADMIN_APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aid request must be admin approved before volunteer assignment",
+        )
+
+    volunteer = (
+        db.query(User)
+        .filter(User.id == payload.volunteer_id)
+        .filter(User.role == UserRole.VOLUNTEER)
+        .first()
+    )
+
+    if not volunteer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Volunteer not found",
+        )
+
+    verification_task = VerificationTask(
+        aid_request_id=aid_request.id,
+        volunteer_id=volunteer.id,
+    )
+
+    aid_request.status = AidRequestStatus.ASSIGNED_TO_VOLUNTEER
+
+    db.add(verification_task)
+    db.commit()
+    db.refresh(verification_task)
+
+    return verification_task
