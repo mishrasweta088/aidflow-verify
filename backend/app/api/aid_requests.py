@@ -54,6 +54,18 @@ def get_my_aid_requests(
         .all()
     )
 
+@router.get("/verified", response_model=list[AidRequestResponse])
+def get_verified_aid_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DONOR)),
+):
+    return (
+        db.query(AidRequest)
+        .filter(AidRequest.status == AidRequestStatus.VERIFIED)
+        .order_by(AidRequest.created_at.desc())
+        .all()
+    )
+
 @router.post("/{aid_request_id}/ai-review", response_model=AidRequestResponse)
 def review_aid_request_with_ai(
     aid_request_id: str,
@@ -223,3 +235,4 @@ def assign_volunteer_to_aid_request(
     db.refresh(verification_task)
 
     return verification_task
+
