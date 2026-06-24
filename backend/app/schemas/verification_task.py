@@ -9,6 +9,8 @@ from app.models.verification_task import VerificationTaskStatus
 class VerificationTaskAssign(BaseModel):
     volunteer_id: UUID
 
+class VerificationTaskUpdate(BaseModel):
+    notes: str | None = None
 
 class VerificationTaskResponse(BaseModel):
     id: UUID
