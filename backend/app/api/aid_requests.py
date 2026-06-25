@@ -14,6 +14,8 @@ from app.schemas.verification_task import VerificationTaskAssign, VerificationTa
 
 from datetime import datetime
 
+from app.schemas.aid_request import AidRequestCreate, AidRequestProofSubmit, AidRequestResponse, NearbyVolunteerResponse
+
 router = APIRouter(prefix="/aid-requests", tags=["aid requests"])
 
 
@@ -97,6 +99,42 @@ def claim_aid_request(
     aid_request.claimed_by_donor_id = current_user.id
     aid_request.claimed_at = datetime.utcnow()
     aid_request.status = AidRequestStatus.CLAIMED
+
+    db.commit()
+    db.refresh(aid_request)
+
+    return aid_request
+
+@router.post("/{aid_request_id}/submit-proof", response_model=AidRequestResponse)
+def submit_fulfillment_proof(
+    aid_request_id: str,
+    payload: AidRequestProofSubmit,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DONOR)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    if aid_request.status != AidRequestStatus.CLAIMED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only claimed aid requests can receive proof",
+        )
+
+    if aid_request.claimed_by_donor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the donor who claimed this request can submit proof",
+        )
+
+    aid_request.proof_url = payload.proof_url
+    aid_request.proof_notes = payload.proof_notes
+    aid_request.proof_uploaded_at = datetime.utcnow()
 
     db.commit()
     db.refresh(aid_request)

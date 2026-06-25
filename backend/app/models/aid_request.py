@@ -65,6 +65,10 @@ class AidRequest(Base):
     )
 
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
+    proof_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    proof_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    proof_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

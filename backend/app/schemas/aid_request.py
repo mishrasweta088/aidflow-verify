@@ -13,6 +13,10 @@ class AidRequestCreate(BaseModel):
     address: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    
+class AidRequestProofSubmit(BaseModel):
+    proof_url: str
+    proof_notes: str | None = None  
 
 
 class AidRequestResponse(BaseModel):
@@ -34,6 +38,10 @@ class AidRequestResponse(BaseModel):
 
     claimed_by_donor_id: UUID | None
     claimed_at: datetime | None
+    
+    proof_url: str | None
+    proof_notes: str | None
+    proof_uploaded_at: datetime | None
 
     created_at: datetime
     updated_at: datetime
