@@ -7,7 +7,6 @@ from app.services.ai_review import generate_ai_review
 
 from app.dependencies import get_current_user, get_db, require_roles
 from app.models.user import User, UserRole
-from app.schemas.aid_request import AidRequestCreate, AidRequestResponse, NearbyVolunteerResponse
 
 from app.models.verification_task import VerificationTask
 from app.schemas.verification_task import VerificationTaskAssign, VerificationTaskResponse
@@ -15,6 +14,8 @@ from app.schemas.verification_task import VerificationTaskAssign, VerificationTa
 from datetime import datetime
 
 from app.schemas.aid_request import AidRequestCreate, AidRequestProofSubmit, AidRequestResponse, NearbyVolunteerResponse
+
+from app.services.audit import create_audit_log
 
 router = APIRouter(prefix="/aid-requests", tags=["aid requests"])
 
@@ -96,9 +97,21 @@ def claim_aid_request(
             detail="Aid request is already claimed",
         )
 
+    old_status = aid_request.status.value
+
     aid_request.claimed_by_donor_id = current_user.id
     aid_request.claimed_at = datetime.utcnow()
     aid_request.status = AidRequestStatus.CLAIMED
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="donor_claimed_request",
+        old_status=old_status,
+        new_status=AidRequestStatus.CLAIMED.value,
+        notes="Donor claimed aid request",
+    )
 
     db.commit()
     db.refresh(aid_request)
@@ -132,9 +145,21 @@ def submit_fulfillment_proof(
             detail="Only the donor who claimed this request can submit proof",
         )
 
+    old_status = aid_request.status.value
+
     aid_request.proof_url = payload.proof_url
     aid_request.proof_notes = payload.proof_notes
     aid_request.proof_uploaded_at = datetime.utcnow()
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="donor_submitted_proof",
+        old_status=old_status,
+        new_status=aid_request.status.value,
+        notes="Donor submitted fulfillment proof",
+    )
 
     db.commit()
     db.refresh(aid_request)
@@ -167,7 +192,18 @@ def mark_aid_request_fulfilled(
             detail="Proof must be submitted before marking fulfilled",
         )
 
+    old_status = aid_request.status.value
     aid_request.status = AidRequestStatus.FULFILLED
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="admin_marked_fulfilled",
+        old_status=old_status,
+        new_status=AidRequestStatus.FULFILLED.value,
+        notes="Admin marked aid request as fulfilled",
+    )
 
     db.commit()
     db.refresh(aid_request)
@@ -216,7 +252,18 @@ def approve_aid_request(
             detail="Aid request not found",
         )
 
+    old_status = aid_request.status.value
     aid_request.status = AidRequestStatus.ADMIN_APPROVED
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="admin_approved_request",
+        old_status=old_status,
+        new_status=AidRequestStatus.ADMIN_APPROVED.value,
+        notes="Admin approved aid request",
+    )
 
     db.commit()
     db.refresh(aid_request)
@@ -238,7 +285,18 @@ def reject_aid_request(
             detail="Aid request not found",
         )
 
+    old_status = aid_request.status.value
     aid_request.status = AidRequestStatus.ADMIN_REJECTED
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="admin_rejected_request",
+        old_status=old_status,
+        new_status=AidRequestStatus.ADMIN_REJECTED.value,
+        notes="Admin rejected aid request",
+    )
 
     db.commit()
     db.refresh(aid_request)
@@ -331,12 +389,24 @@ def assign_volunteer_to_aid_request(
             detail="Volunteer not found",
         )
 
+    old_status = aid_request.status.value
+
     verification_task = VerificationTask(
         aid_request_id=aid_request.id,
         volunteer_id=volunteer.id,
     )
 
     aid_request.status = AidRequestStatus.ASSIGNED_TO_VOLUNTEER
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="admin_assigned_volunteer",
+        old_status=old_status,
+        new_status=AidRequestStatus.ASSIGNED_TO_VOLUNTEER.value,
+        notes=f"Admin assigned volunteer {volunteer.id}",
+    )
 
     db.add(verification_task)
     db.commit()

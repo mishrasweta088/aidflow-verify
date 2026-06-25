@@ -6,6 +6,7 @@ from app.models.aid_request import AidRequest, AidRequestStatus
 from app.models.user import User, UserRole
 from app.models.verification_task import VerificationTask, VerificationTaskStatus
 from app.schemas.verification_task import VerificationTaskResponse, VerificationTaskUpdate
+from app.services.audit import create_audit_log
 
 router = APIRouter(prefix="/verification-tasks", tags=["verification tasks"])
 
@@ -46,9 +47,21 @@ def verify_task(
 
     aid_request = db.query(AidRequest).filter(AidRequest.id == task.aid_request_id).first()
 
+    old_status = aid_request.status.value
+
     task.status = VerificationTaskStatus.VERIFIED
     task.notes = payload.notes
     aid_request.status = AidRequestStatus.VERIFIED
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="volunteer_verified_request",
+        old_status=old_status,
+        new_status=AidRequestStatus.VERIFIED.value,
+        notes=payload.notes,
+    )
 
     db.commit()
     db.refresh(task)
@@ -79,9 +92,21 @@ def reject_task(
 
     aid_request = db.query(AidRequest).filter(AidRequest.id == task.aid_request_id).first()
 
+    old_status = aid_request.status.value
+
     task.status = VerificationTaskStatus.REJECTED
     task.notes = payload.notes
     aid_request.status = AidRequestStatus.VERIFICATION_REJECTED
+
+    create_audit_log(
+        db=db,
+        aid_request_id=aid_request.id,
+        actor_user_id=current_user.id,
+        action="volunteer_rejected_request",
+        old_status=old_status,
+        new_status=AidRequestStatus.VERIFICATION_REJECTED.value,
+        notes=payload.notes,
+    )
 
     db.commit()
     db.refresh(task)
