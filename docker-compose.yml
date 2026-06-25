@@ -11,5 +11,16 @@ services:
     volumes:
       - aidflow_postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build:
+      context: ./backend
+    container_name: aidflow_backend
+    environment:
+      DATABASE_URL: postgresql://aidflow_user:aidflow_password@db:5432/aidflow_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
 volumes:
   aidflow_postgres_data:
