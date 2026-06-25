@@ -141,6 +141,39 @@ def submit_fulfillment_proof(
 
     return aid_request
 
+@router.post("/{aid_request_id}/mark-fulfilled", response_model=AidRequestResponse)
+def mark_aid_request_fulfilled(
+    aid_request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    aid_request = db.query(AidRequest).filter(AidRequest.id == aid_request_id).first()
+
+    if not aid_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aid request not found",
+        )
+
+    if aid_request.status != AidRequestStatus.CLAIMED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only claimed aid requests can be marked fulfilled",
+        )
+
+    if not aid_request.proof_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Proof must be submitted before marking fulfilled",
+        )
+
+    aid_request.status = AidRequestStatus.FULFILLED
+
+    db.commit()
+    db.refresh(aid_request)
+
+    return aid_request
+
 @router.post("/{aid_request_id}/ai-review", response_model=AidRequestResponse)
 def review_aid_request_with_ai(
     aid_request_id: str,
