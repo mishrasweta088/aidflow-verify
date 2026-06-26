@@ -71,6 +71,13 @@ def get_verified_aid_requests(
         .all()
     )
 
+@router.get("/admin/all", response_model=list[AidRequestResponse])
+def get_all_aid_requests_for_admin(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    return db.query(AidRequest).order_by(AidRequest.created_at.desc()).all()
+
 @router.post("/{aid_request_id}/claim", response_model=AidRequestResponse)
 def claim_aid_request(
     aid_request_id: str,
@@ -413,4 +420,3 @@ def assign_volunteer_to_aid_request(
     db.refresh(verification_task)
 
     return verification_task
-
