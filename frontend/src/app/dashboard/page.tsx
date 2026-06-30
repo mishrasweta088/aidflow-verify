@@ -53,8 +53,15 @@ export default function DashboardPage() {
   const [address, setAddress] = useState("");
 
   async function fetchRequestsForRole(token: string, role: string) {
-    const endpoint =
-      role === "admin" ? "/aid-requests/admin/all" : "/aid-requests/my";
+    let endpoint = "/aid-requests/my";
+
+    if (role === "admin") {
+      endpoint = "/aid-requests/admin/all";
+    }
+
+    if (role === "donor") {
+      endpoint = "/aid-requests/verified";
+    }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
@@ -296,6 +303,32 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleClaimRequest(requestId: string) {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      setMessage("Please login first.");
+      return;
+    }
+
+    setMessage("Claiming request...");
+
+    const response = await fetch(`${API_BASE_URL}/aid-requests/${requestId}/claim`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      setMessage("Request claimed successfully.");
+      await fetchRequestsForRole(token, "donor");
+    } else {
+      const errorData = await response.json();
+      setMessage(errorData.detail || "Failed to claim request.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-5xl space-y-8">
@@ -453,9 +486,7 @@ export default function DashboardPage() {
 
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleAssignVolunteer(request.id, volunteer.id)
-                                }
+                                onClick={() => handleAssignVolunteer(request.id, volunteer.id)}
                                 className="mt-3 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                               >
                                 Assign Volunteer
@@ -524,6 +555,48 @@ export default function DashboardPage() {
                       </button>
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {user?.role === "donor" && (
+          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+            <h2 className="text-2xl font-bold">Available Verified Requests</h2>
+            <p className="mt-2 text-slate-400">
+              Browse verified aid requests and claim one to fulfill.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              {requests.length === 0 && (
+                <p className="text-slate-400">No verified requests available.</p>
+              )}
+
+              {requests.map((request) => (
+                <div
+                  key={request.id}
+                  className="rounded-xl border border-slate-700 bg-slate-950 p-5"
+                >
+                  <h3 className="text-xl font-semibold">{request.title}</h3>
+                  <p className="mt-2 text-slate-400">{request.description}</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Category: {request.category}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Address: {request.address}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-white">
+                    Status: {request.status}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => handleClaimRequest(request.id)}
+                    className="mt-4 rounded-lg bg-white px-4 py-2 font-semibold text-slate-950 hover:bg-slate-200"
+                  >
+                    Claim Request
+                  </button>
                 </div>
               ))}
             </div>
