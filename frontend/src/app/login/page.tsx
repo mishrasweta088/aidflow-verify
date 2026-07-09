@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -18,30 +19,39 @@ export default function LoginPage() {
     formData.append("username", email);
     formData.append("password", password);
 
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        body: formData,
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-    
-      localStorage.setItem("access_token", data.access_token);
-    
-      setMessage("Login successful. Token saved.");
-      setEmail("");
-      setPassword("");
-    
-      router.push("/dashboard");
-    } else {
-      const errorData = await response.json();
-      setMessage(errorData.detail || "Login failed.");
+      if (response.ok) {
+        const data = await response.json();
+
+        localStorage.setItem("access_token", data.access_token);
+
+        setMessage("Login successful. Token saved.");
+        setEmail("");
+        setPassword("");
+
+        router.push("/dashboard");
+      } else {
+        const errorData = await response.json();
+        setMessage(errorData.detail || "Login failed.");
+      }
+    } catch {
+      setMessage("Backend may be waking up. Please wait 30 seconds and try again.");
     }
   }
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8">
+        <nav className="mb-6 flex gap-4 text-sm text-slate-300">
+          <Link href="/" className="hover:text-white">Home</Link>
+          <Link href="/login" className="hover:text-white">Login</Link>
+          <Link href="/register" className="hover:text-white">Register</Link>
+        </nav>
         <h1 className="text-3xl font-bold">Login</h1>
         <p className="mt-2 text-slate-400">
           Sign in to manage aid requests, verification tasks, or donor claims.

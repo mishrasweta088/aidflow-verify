@@ -303,6 +303,11 @@ export default function DashboardPage() {
     }
   }
 
+  function handleLogout() {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+  }
+
   async function handleClaimRequest(requestId: string) {
     const token = localStorage.getItem("access_token");
 
@@ -333,7 +338,17 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-5xl space-y-8">
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Logout
+            </button>
+          </div>
 
           {message && <p className="mt-4 text-slate-300">{message}</p>}
 
