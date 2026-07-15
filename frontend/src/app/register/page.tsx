@@ -96,6 +96,11 @@ export default function RegisterPage() {
             <option value="admin">Admin</option>
           </select>
 
+          <p className="text-sm leading-6 text-slate-400">
+            Select a role to test the workflow: requesters submit aid requests,
+            admins review them, volunteers verify them, and donors claim verified requests.
+          </p>
+
           <button
             type="button"
             onClick={handleRegister}
