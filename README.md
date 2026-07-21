@@ -157,8 +157,6 @@ The AI review structures request information into:
 
 For the MVP, AI review output is stored directly in the aid_requests table instead of a separate ai_reviews table. This kept the workflow simple while still making AI output visible and reviewable.
 
-This project does not train a custom AI model.
-
 ## PostGIS Volunteer Matching
 
 AidFlow Verify uses PostgreSQL with PostGIS for nearby volunteer matching.
@@ -269,39 +267,21 @@ The production app is deployed with:
 - Render for backend
 - Neon for PostgreSQL/PostGIS database
 
-## Production Issues Debugged
+## Production Deployment Notes
 
-During deployment, these issues were fixed:
-
-- CORS configuration so Vercel frontend could call Render backend
-- Alembic using the wrong local database URL during deployment
-- Missing PostGIS extension on Neon
-- Render cold start behavior on first request
-
-## What This Project Does Not Implement
-
-This MVP does not include:
-
-- Real payment processing
-- Real file storage for proof uploads
-- A trained custom AI model
-- Enterprise-scale security hardening
-- Real identity verification
-- Notification system
+During deployment, I configured CORS for the Vercel frontend, updated Alembic to use environment-based database URLs, enabled PostGIS on Neon, and accounted for Render free-tier cold starts.
 
 ## Lessons Learned
 
-This project showed the importance of modeling workflow state transitions carefully instead of building only basic CRUD APIs. It also showed how authentication, authorization, migrations, tests, Docker, CI/CD, and audit logs improve maintainability and make a project easier to explain in software engineering interviews.
+This project reinforced the importance of modeling workflow state transitions carefully instead of building only basic CRUD APIs. It also showed how authentication, authorization, migrations, tests, Docker, CI/CD, and audit logs improve maintainability, reliability, and production readiness.
 
 ## Future Improvements
 
-- Real proof file upload with cloud storage
-- Email notifications
-- Admin analytics dashboard
-- Better filtering and pagination
-- More advanced AI risk scoring
-- Volunteer availability scheduling
-- Stronger production security hardening
+- Add pagination, filtering, and search for admin, donor, and volunteer dashboards
+- Add lightweight AI evaluation and prompt-version tracking for AI-assisted request review
+- Add cloud-backed proof file uploads using Supabase Storage, Cloudinary, or similar storage
+- Add production monitoring with Sentry or similar error tracking
+- Add API safeguards such as rate limiting, stricter validation, and improved error handling
 
 ## Final Status
 
