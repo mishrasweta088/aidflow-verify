@@ -115,15 +115,6 @@ export default function RegisterPage() {
             Go to Login
           </Link>
         )}
-
-        {message.includes("Account created successfully") && (
-          <Link
-            href="/login"
-            className="mt-4 block rounded-lg bg-emerald-500 px-4 py-3 text-center font-semibold text-white hover:bg-emerald-600"
-          >
-            Go to Login
-          </Link>
-        )}
       </div>
     </main>
   );
